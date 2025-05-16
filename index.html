@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Let's Recap</title>
+    <!-- Import toolkit Bootstrap to have CSS and JS easely -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        body { padding: 2rem; }
+        input[type=number] { width: 70px; display: inline-block; }
+        textarea { width: 100%; height: 100px; }
+        .note-label { display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="text-center">Let's Recap</h1>
+    <!-- Make buttons : Upload and Random Student -->
+    <div class="row justify-content-center mb-3">
+        <div class="col-auto">
+            <div class="input-group mb-3">
+                <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('uploadCsv').click()">Choose a file</button>
+                <input type="file" id="uploadCsv" accept=".csv" onchange="updateFileLabel(); loadCsv(event)" class="d-none">
+                <input type="text" class="form-control bg-light" id="fileNameDisplay" value="No file selected" readonly>
+            </div>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" id="selectStudent">Select Random Student</button>
+        </div>
+    </div>
+    <!-- Show Student Name -->
+    <h3 class="text-center" id="studentName">Name FirstName</h3>
+    <!-- Select Note of the Student -->
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="mb-2 note-label">
+                <label for="note1">Knowledge</label>
+                <div><input id="note1" type="number" min="0" max="4" class="form-control d-inline"> /4</div>
+            </div>
+            <div class="mb-2 note-label">
+                <label for="note2">Lexical and Grammatical Accuracy</label>
+                <div><input id="note2" type="number" min="0" max="3" class="form-control d-inline"> /3</div>
+            </div>
+            <div class="mb-2 note-label">
+                <label for="note3">Pronunciation and Fluency</label>
+                <div><input id="note3" type="number" min="0" max="3" class="form-control d-inline"> /3</div>
+            </div>
+            <div class="mb-2 note-label">
+                <label for="totalScore">Score</label>
+                <div><input id="totalScore" type="number" class="form-control d-inline" readonly> /10</div>
+            </div>
+            <div class="mb-3">
+                <label for="comment">Comment</label>
+                <textarea id="comment" class="form-control"></textarea>
+            </div>
+            <div class="text-center">
+                <button class="btn btn-success me-2" id="saveBtn">Save Result</button>
+                <button class="btn btn-secondary me-2" id="downloadAll">Download Updated File</button>
+                <a href="#" target="_blank" id="readmeLink" class="btn btn-danger">ReadMe</a>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Import File CSV -->
+<script>
+let students = [];
+let currentStudent = null;
+let originalData = [];
+let originalHeaders = [];
+function updateFileLabel() {
+    const input = document.getElementById("uploadCsv");
+    const fileNameDisplay = document.getElementById("fileNameDisplay");
+    fileNameDisplay.value = input.files.length ? input.files[0].name : "No file selected";
+}
+function loadCsv(e) {
+    const file = e.target.files[0];
+    Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+            originalData = results.data;
+            originalHeaders = results.meta.fields;
+            students = originalData.map(row => row[originalHeaders[0]]);
+            alert("List loaded!");
+        }
+    });
+}
+// Select a random student
+document.getElementById("selectStudent").addEventListener("click", function () {
+    if (students.length === 0) return alert("Empty list!");
+    const name = students[Math.floor(Math.random() * students.length)];
+    currentStudent = name;
+    document.getElementById("studentName").innerText = name;
+    // Reset all fields when you select a new student
+    document.getElementById("note1").value = "";
+    document.getElementById("note2").value = "";
+    document.getElementById("note3").value = "";
+    document.getElementById("totalScore").value = "";
+    document.getElementById("comment").value = "";
+});
+
+function updateScore() {
+    let k = parseFloat(document.getElementById("note1").value) || 0;
+    let l = parseFloat(document.getElementById("note2").value) || 0;
+    let p = parseFloat(document.getElementById("note3").value) || 0;
+    // Limit values to their respective ranges
+    k = Math.max(0, Math.min(4, k));
+    l = Math.max(0, Math.min(3, l));
+    p = Math.max(0, Math.min(3, p));
+    // Update the input fields with limited values
+    document.getElementById("note1").value = k;
+    document.getElementById("note2").value = l;
+    document.getElementById("note3").value = p;
+    const score = Math.min(10, (k + l + p).toFixed(2));
+    document.getElementById("totalScore").value = score;
+}
+// Update score based on inputs
+["note1", "note2", "note3"].forEach(id => {
+    document.getElementById(id).addEventListener("input", updateScore);
+});
+// Save result of the student in the copy of your document
+document.getElementById("saveBtn").addEventListener("click", function () {
+    if (!currentStudent) return alert("No student selected.");
+    const note1 = document.getElementById("note1").value;
+    const note2 = document.getElementById("note2").value;
+    const note3 = document.getElementById("note3").value;
+    const score = document.getElementById("totalScore").value;
+    const comment = document.getElementById("comment").value;
+    if (!originalHeaders.includes("Knowledge")) originalHeaders.push("Knowledge");
+    if (!originalHeaders.includes("Lexical")) originalHeaders.push("Lexical");
+    if (!originalHeaders.includes("Pronunciation")) originalHeaders.push("Pronunciation");
+    if (!originalHeaders.includes("Note")) originalHeaders.push("Note");
+    if (!originalHeaders.includes("Comment")) originalHeaders.push("Comment");
+    const row = originalData.find(r => r[originalHeaders[0]] === currentStudent);
+    if (row) {
+        row["Knowledge"] = note1;
+        row["Lexical"] = note2;
+        row["Pronunciation"] = note3;
+        row["Score"] = score;
+        row["Comment"] = comment;
+        alert("Result saved in memory. You can download the updated file.");
+    } else {
+        alert("Student not found in data.");
+    }
+});
+// Download copy of your document with results in memory to get a CSV file
+document.getElementById("downloadAll").addEventListener("click", function () {
+    if (originalData.length === 0) return alert("No data to export.");
+    const csv = Papa.unparse({ fields: originalHeaders, data: originalData });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "UpdatedListeEleves.csv";
+    link.click();
+});
+// Open file ReadMe with Google Drive to explain how to use the tool anytime
+document.getElementById("readmeLink").href = "https://docs.google.com/document/d/1sWbeMqCmbJT4C85D9BV0tjlFAAt27Rb1/edit?usp=sharing&ouid=100631989150236245914&rtpof=true&sd=true";
+</script>
+</body>
+</html>
